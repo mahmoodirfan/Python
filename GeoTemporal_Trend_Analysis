@@ -1,0 +1,66 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Nov  5 10:54:02 2023
+
+@author: Irfan
+"""
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import linregress
+
+# Load the SST and Chl-a data
+# Ensure to replace the file path with the actual path to your dataset
+file_path = r'C:\path_to_your_file\SST_Chlr_Mean.xlsx'  
+data = pd.read_excel(file_path)
+
+# Function to plot SST and Chl-a data with trendlines for a given geographic point
+def plot_data_with_trendline(latitude, longitude):
+    # Filter data for the specified latitude and longitude
+    point_data = data[(data['latitude'] == latitude) & (data['longitude'] == longitude)]
+    
+    # Handle cases with no data for the specified coordinates
+    if point_data.empty:
+        print(f"No data found for latitude {latitude} and longitude {longitude}.")
+        return
+    
+    # Extract SST and Chl-a data for the location
+    sst_columns = [col for col in data.columns if 'SST' in col]
+    chl_columns = [col for col in data.columns if 'Chl' in col]
+
+    # Define the range of years for the analysis
+    years = np.arange(2003, 2022)
+
+    # Retrieve the SST and Chl-a values for the location
+    sst_values = point_data[sst_columns].values.flatten()
+    chl_values = point_data[chl_columns].values.flatten()
+
+    # Plotting SST trends
+    plt.figure(figsize=(14, 7))
+    plt.subplot(1, 2, 1)
+    plt.plot(years, sst_values, marker='o', linestyle='-', color='blue')
+    sst_slope, sst_intercept, _, _, _ = linregress(years, sst_values)
+    plt.plot(years, sst_intercept + sst_slope * years, 'r', label='Trend Line (SST)')
+    plt.xlabel('Year')
+    plt.ylabel('SST')
+    plt.title(f'SST Time Series at ({latitude}, {longitude})')
+    plt.legend()
+
+    # Plotting Chl-a trends
+    plt.subplot(1, 2, 2)
+    plt.plot(years, chl_values, marker='o', linestyle='-', color='green')
+    chl_slope, chl_intercept, _, _, _ = linregress(years, chl_values)
+    plt.plot(years, chl_intercept + chl_slope * years, 'r', label='Trend Line (Chl-a)')
+    plt.xlabel('Year')
+    plt.ylabel('Chl-a')
+    plt.title(f'Chl-a Time Series at ({latitude}, {longitude})')
+    plt.legend()
+
+    # Adjust layout and display the plots
+    plt.tight_layout()
+    plt.show()
+
+# Example usage of the function with specific coordinates
+# Replace these coordinates with those of your interest
+plot_data_with_trendline(15.19433373, 41.75212739)
