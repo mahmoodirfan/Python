@@ -1,0 +1,73 @@
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+
+# Load the SST data
+data = pd.read_csv(r'\path to file\Monthly_SST.csv') # Replace '\path to file\Monthly_SST.csv' with the actual path to your SST dataset
+
+# Convert the 'date' column to a datetime format for easier manipulation
+data['date'] = pd.to_datetime(data['date'], format='%B %Y.0')
+
+# Set the 'date' as the index of the dataframe for time-series analysis
+data.set_index('date', inplace=True)
+
+# Interpolate missing SST values using time-weighted interpolation. This helps in smoothing the dataset by filling in missing or null values
+data['mean_sst'].interpolate(method='time', inplace=True)
+
+# Reset the index to bring 'date' back as a column
+data.reset_index(inplace=True)
+
+# Extract the month from the date for seasonal classification
+data['month'] = data['date'].dt.month
+
+# Define the seasons based on meteorological standard
+seasons_dict = {
+    'Dec-Jan-Feb': (12, 1, 2),
+    'Mar-Apr-May': (3, 4, 5),
+    'Jun-Jul-Aug': (6, 7, 8),
+    'Sep-Oct-Nov': (9, 10, 11),
+}
+
+# Map the 'season' column to the corresponding meteorological seasons
+data['season'] = data['date'].dt.month.apply(lambda x: next(season for season, months in seasons_dict.items() if x in months))
+
+# Sort the dataset by date for chronological analysis
+data.sort_values(by='date', inplace=True)
+
+# Plotting each season's SST trend in a 2x2 subplot layout
+fig, axes = plt.subplots(2, 2, figsize=(14, 10), sharex=True, sharey=True)
+temperature_increases = {}
+
+for i, season in enumerate(seasons_dict.keys()):
+    # Filter the data for the current season
+    season_data = data[data['date'].dt.month.isin(seasons_dict[season])].sort_values(by='date')
+    
+    # Fit a linear regression model to the seasonal data
+    X = season_data['date'].map(pd.Timestamp.toordinal).values.reshape(-1, 1)
+    y = season_data['mean_sst'].values
+    model = LinearRegression()
+    model.fit(X, y)
+    
+    # Predict and plot the trend line
+    trend = model.predict(X)
+    axes[i//2, i%2].plot(season_data['date'], trend, color='red', label='Trend Line')
+    
+    # Scatter plot of actual data points
+    axes[i//2, i%2].scatter(season_data['date'], y, label='Actual Data', color='blue', alpha=0.5)
+    
+    # Calculate the increase in temperature over the observed period
+    increase = trend[-1] - trend[0]
+    temperature_increases[season] = increase
+    
+    # Set plot titles and legends
+    axes[i//2, i%2].set_title(f"{season} Trend")
+    axes[i//2, i%2].legend()
+
+# Adjust the layout and display the plot
+plt.tight_layout()
+plt.show()
+
+# Output the calculated temperature increases for each season
+for season, increase in temperature_increases.items():
+    print(f"The temperature increase for {season} is {increase:.2f} °C.")
